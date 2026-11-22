@@ -1,0 +1,379 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account profile with role and timestamps.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "AdminMember": {
+      "title": "AdminMember",
+      "description": "Trusted administrator directory record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "grantedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "grantedAt"]
+    },
+    "ScreeningRecord": {
+      "title": "ScreeningRecord",
+      "description": "Completed preliminary color vision screening result owned by a user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "testType": {
+          "type": "string",
+          "enum": ["ishihara-inspired", "red-green", "blue-yellow", "arrangement"]
+        },
+        "testName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "totalQuestions": {
+          "type": "integer"
+        },
+        "correctCount": {
+          "type": "integer"
+        },
+        "incorrectCount": {
+          "type": "integer"
+        },
+        "unansweredCount": {
+          "type": "integer"
+        },
+        "scorePercentage": {
+          "type": "number"
+        },
+        "durationSeconds": {
+          "type": "integer"
+        },
+        "resultLabel": {
+          "type": "string",
+          "enum": ["A", "B", "C"]
+        },
+        "arrangementErrors": {
+          "type": "integer"
+        },
+        "categoryBreakdown": {
+          "type": "array"
+        },
+        "responses": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "testType",
+        "testName",
+        "completedAt",
+        "totalQuestions",
+        "correctCount",
+        "incorrectCount",
+        "unansweredCount",
+        "scorePercentage",
+        "durationSeconds",
+        "resultLabel",
+        "categoryBreakdown",
+        "responses"
+      ]
+    },
+    "AnonymousStat": {
+      "title": "AnonymousStat",
+      "description": "De-identified aggregated screening telemetry with zero PII.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "testType": {
+          "type": "string",
+          "enum": ["ishihara-inspired", "red-green", "blue-yellow", "arrangement"]
+        },
+        "scorePercentage": {
+          "type": "number"
+        },
+        "resultLabel": {
+          "type": "string",
+          "enum": ["A", "B", "C"]
+        },
+        "durationSeconds": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "testType", "scorePercentage", "resultLabel", "durationSeconds", "createdAt"]
+    },
+    "EducationalArticle": {
+      "title": "EducationalArticle",
+      "description": "Vision science knowledge center article managed by admins.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12000
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "order": {
+          "type": "integer"
+        },
+        "published": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "slug", "title", "category", "summary", "content", "reference", "order", "published", "updatedAt"]
+    },
+    "FaqItem": {
+      "title": "FaqItem",
+      "description": "Frequently asked question entry managed by admins.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "order": {
+          "type": "integer"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "question", "answer", "order", "updatedAt"]
+    },
+    "ExperimentalPlate": {
+      "title": "ExperimentalPlate",
+      "description": "Original experimental pseudoisochromatic color-dot screening plate configuration.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "module": {
+          "type": "string",
+          "enum": ["ishihara-inspired", "red-green", "blue-yellow"]
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "stimulusType": {
+          "type": "string",
+          "enum": ["number", "shape", "letter", "path"]
+        },
+        "targetValue": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "promptText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "options": {
+          "type": "array"
+        },
+        "fgPalette": {
+          "type": "array"
+        },
+        "bgPalette": {
+          "type": "array"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "module", "category", "stimulusType", "targetValue", "promptText", "options", "fgPalette", "bgPalette", "seed", "enabled", "updatedAt"]
+    },
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Global test availability toggles and editable site content.",
+      "type": "object",
+      "properties": {
+        "heroTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "heroSubtitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "disclaimerNotice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "enabledTests": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["heroTitle", "heroSubtitle", "disclaimerNotice", "enabledTests", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profiles restricted to the owner and admins."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminMember" },
+      "description": "Administrator directory documents."
+    },
+    "/screenings/{screeningId}": {
+      "schema": { "$ref": "#/entities/ScreeningRecord" },
+      "description": "User screening results owned by userId."
+    },
+    "/anonymousStats/{statId}": {
+      "schema": { "$ref": "#/entities/AnonymousStat" },
+      "description": "De-identified aggregated screening telemetry readable only by admins."
+    },
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/EducationalArticle" },
+      "description": "Public educational knowledge center articles managed by admins."
+    },
+    "/faqs/{faqId}": {
+      "schema": { "$ref": "#/entities/FaqItem" },
+      "description": "Public FAQs managed by admins."
+    },
+    "/plates/{plateId}": {
+      "schema": { "$ref": "#/entities/ExperimentalPlate" },
+      "description": "Experimental plate definitions managed by admins."
+    },
+    "/siteConfig/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Global site configuration and test availability toggles."
+    }
+  }
+}

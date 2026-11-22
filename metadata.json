@@ -1,0 +1,6 @@
+{
+  "name": "ColorVision Test",
+  "description": "Discover How You See Colors. Preliminary online color vision screening platform with Ishihara-inspired color plates, red-green and blue-yellow exercises, color arrangement tasks, PDF reports, and clinical education.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

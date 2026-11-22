@@ -1,0 +1,279 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'sajondey102@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Entity validators
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == userId && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.role in ['user', 'admin']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdmin(data, adminId) {
+      return data.keys().hasAll(['uid', 'email', 'grantedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'grantedAt'])
+        && data.uid is string && data.uid == adminId && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.grantedAt is timestamp;
+    }
+
+    function isValidScreening(data, screeningId) {
+      return data.keys().hasAll([
+          'id', 'userId', 'testType', 'testName', 'completedAt',
+          'totalQuestions', 'correctCount', 'incorrectCount', 'unansweredCount',
+          'scorePercentage', 'durationSeconds', 'resultLabel',
+          'categoryBreakdown', 'responses'
+        ])
+        && data.keys().hasOnly([
+          'id', 'userId', 'testType', 'testName', 'completedAt',
+          'totalQuestions', 'correctCount', 'incorrectCount', 'unansweredCount',
+          'scorePercentage', 'durationSeconds', 'resultLabel',
+          'arrangementErrors', 'categoryBreakdown', 'responses'
+        ])
+        && data.id is string && data.id == screeningId && isValidId(data.id)
+        && data.userId is string && isValidId(data.userId)
+        && data.testType in ['ishihara-inspired', 'red-green', 'blue-yellow', 'arrangement']
+        && data.testName is string && data.testName.size() >= 1 && data.testName.size() <= 120
+        && data.completedAt is timestamp
+        && data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 100
+        && data.correctCount is int && data.correctCount >= 0 && data.correctCount <= 100
+        && data.incorrectCount is int && data.incorrectCount >= 0 && data.incorrectCount <= 100
+        && data.unansweredCount is int && data.unansweredCount >= 0 && data.unansweredCount <= 100
+        && data.scorePercentage is number && data.scorePercentage >= 0 && data.scorePercentage <= 100
+        && data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 86400
+        && data.resultLabel in ['A', 'B', 'C']
+        && (!('arrangementErrors' in data) || (data.arrangementErrors is int && data.arrangementErrors >= 0 && data.arrangementErrors <= 1000))
+        && data.categoryBreakdown is list && data.categoryBreakdown.size() >= 1 && data.categoryBreakdown.size() <= 20
+        && data.categoryBreakdown[0] is map
+        && data.responses is list && data.responses.size() >= 1 && data.responses.size() <= 60
+        && data.responses[0] is map;
+    }
+
+    function isValidAnonymousStat(data, statId) {
+      return data.keys().hasAll(['id', 'testType', 'scorePercentage', 'resultLabel', 'durationSeconds', 'createdAt'])
+        && data.keys().hasOnly(['id', 'testType', 'scorePercentage', 'resultLabel', 'durationSeconds', 'createdAt'])
+        && data.id is string && data.id == statId && isValidId(data.id)
+        && data.testType in ['ishihara-inspired', 'red-green', 'blue-yellow', 'arrangement']
+        && data.scorePercentage is number && data.scorePercentage >= 0 && data.scorePercentage <= 100
+        && data.resultLabel in ['A', 'B', 'C']
+        && data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 86400
+        && data.createdAt is timestamp;
+    }
+
+    function isValidArticle(data, articleId) {
+      return data.keys().hasAll(['id', 'slug', 'title', 'category', 'summary', 'content', 'reference', 'order', 'published', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'slug', 'title', 'category', 'summary', 'content', 'reference', 'order', 'published', 'updatedAt'])
+        && data.id is string && data.id == articleId && isValidId(data.id)
+        && data.slug is string && data.slug.size() >= 1 && data.slug.size() <= 120
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 180
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 500
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 12000
+        && data.reference is string && data.reference.size() >= 1 && data.reference.size() <= 300
+        && data.order is int && data.order >= 0 && data.order <= 1000
+        && data.published is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFaq(data, faqId) {
+      return data.keys().hasAll(['id', 'question', 'answer', 'order', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'question', 'answer', 'order', 'updatedAt'])
+        && data.id is string && data.id == faqId && isValidId(data.id)
+        && data.question is string && data.question.size() >= 1 && data.question.size() <= 240
+        && data.answer is string && data.answer.size() >= 1 && data.answer.size() <= 2000
+        && data.order is int && data.order >= 0 && data.order <= 1000
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlate(data, plateId) {
+      return data.keys().hasAll(['id', 'module', 'category', 'stimulusType', 'targetValue', 'promptText', 'options', 'fgPalette', 'bgPalette', 'seed', 'enabled', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'module', 'category', 'stimulusType', 'targetValue', 'promptText', 'options', 'fgPalette', 'bgPalette', 'seed', 'enabled', 'updatedAt'])
+        && data.id is string && data.id == plateId && isValidId(data.id)
+        && data.module in ['ishihara-inspired', 'red-green', 'blue-yellow']
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.stimulusType in ['number', 'shape', 'letter', 'path']
+        && data.targetValue is string && data.targetValue.size() >= 1 && data.targetValue.size() <= 40
+        && data.promptText is string && data.promptText.size() >= 1 && data.promptText.size() <= 200
+        && data.options is list && data.options.size() >= 2 && data.options.size() <= 8
+        && data.options[0] is string
+        && data.fgPalette is list && data.fgPalette.size() >= 1 && data.fgPalette.size() <= 8
+        && data.fgPalette[0] is string
+        && data.bgPalette is list && data.bgPalette.size() >= 1 && data.bgPalette.size() <= 8
+        && data.bgPalette[0] is string
+        && data.seed is int && data.seed >= 1 && data.seed <= 9999999
+        && data.enabled is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll(['heroTitle', 'heroSubtitle', 'disclaimerNotice', 'enabledTests', 'updatedAt'])
+        && data.keys().hasOnly(['heroTitle', 'heroSubtitle', 'disclaimerNotice', 'enabledTests', 'updatedAt'])
+        && data.heroTitle is string && data.heroTitle.size() >= 1 && data.heroTitle.size() <= 140
+        && data.heroSubtitle is string && data.heroSubtitle.size() >= 1 && data.heroSubtitle.size() <= 400
+        && data.disclaimerNotice is string && data.disclaimerNotice.size() >= 1 && data.disclaimerNotice.size() <= 600
+        && data.enabledTests is map
+        && data.enabledTests.keys().hasAll(['ishihara-inspired', 'red-green', 'blue-yellow', 'arrangement'])
+        && data.enabledTests.keys().hasOnly(['ishihara-inspired', 'red-green', 'blue-yellow', 'arrangement'])
+        && data.enabledTests['ishihara-inspired'] is bool
+        && data.enabledTests['red-green'] is bool
+        && data.enabledTests['blue-yellow'] is bool
+        && data.enabledTests['arrangement'] is bool
+        && data.updatedAt is timestamp;
+    }
+
+    // Connection check document
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // Users collection (PII isolated to owner and admin)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUser(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().role == 'user' || isAdmin());
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUser(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() || (
+            isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && (isOwner(userId) || isAdmin());
+    }
+
+    // Admins directory
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && isValidId(adminId)
+        && isValidAdmin(incoming(), adminId)
+        && incoming().grantedAt == request.time;
+      allow delete: if isAdmin() && isValidId(adminId);
+    }
+
+    // User screening records (immutable once completed; owner or admin can read/delete)
+    match /screenings/{screeningId} {
+      allow get: if isValidId(screeningId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser()
+        && isValidId(screeningId)
+        && isValidScreening(incoming(), screeningId)
+        && incoming().userId == request.auth.uid
+        && incoming().completedAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(screeningId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Anonymized screening telemetry (Zero PII, admin-only read/list)
+    match /anonymousStats/{statId} {
+      allow get: if isValidId(statId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(statId)
+        && isValidAnonymousStat(incoming(), statId)
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(statId) && isAdmin();
+    }
+
+    // Educational articles (public read for guests & users, admin write)
+    match /articles/{articleId} {
+      allow get: if isValidId(articleId);
+      allow list: if true;
+      allow create, update: if isAdmin()
+        && isValidId(articleId)
+        && isValidArticle(incoming(), articleId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(articleId);
+    }
+
+    // FAQs (public read, admin write)
+    match /faqs/{faqId} {
+      allow get: if isValidId(faqId);
+      allow list: if true;
+      allow create, update: if isAdmin()
+        && isValidId(faqId)
+        && isValidFaq(incoming(), faqId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(faqId);
+    }
+
+    // Experimental plate sets (public read, admin write)
+    match /plates/{plateId} {
+      allow get: if isValidId(plateId);
+      allow list: if true;
+      allow create, update: if isAdmin()
+        && isValidId(plateId)
+        && isValidPlate(incoming(), plateId)
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(plateId);
+    }
+
+    // Site configuration (public read, admin write)
+    match /siteConfig/{configId} {
+      allow get: if isValidId(configId);
+      allow list: if true;
+      allow create, update: if isAdmin()
+        && isValidId(configId)
+        && isValidSiteConfig(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+  }
+}
