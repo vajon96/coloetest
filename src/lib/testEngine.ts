@@ -1,4 +1,12 @@
 import {
+  BN_OPTION_LABELS,
+  BN_OUTCOME_DETAILS,
+  BN_PLATE_CATEGORY_MAP,
+  BN_STIMULUS_TYPE_MAP,
+  BN_TEST_NAMES,
+  Language,
+} from '../i18n/translations';
+import {
   ArrangementComparison,
   CategoryPerformance,
   ExperimentalPlate,
@@ -47,7 +55,10 @@ export function randomizePlateOrderAndOptions(plates: ExperimentalPlate[]): Expe
   }));
 }
 
-export function getTestDisplayName(testType: TestModuleId): string {
+export function getTestDisplayName(testType: TestModuleId, lang: Language = 'en'): string {
+  if (lang === 'bn') {
+    return BN_TEST_NAMES[testType];
+  }
   switch (testType) {
     case 'ishihara-inspired':
       return 'Ishihara-Inspired Color Plate Screening';
@@ -58,6 +69,21 @@ export function getTestDisplayName(testType: TestModuleId): string {
     case 'arrangement':
       return 'Hue Sequence Color Arrangement Exercise';
   }
+}
+
+export function localizeCategory(category: string, lang: Language): string {
+  if (lang !== 'bn') return category;
+  return BN_PLATE_CATEGORY_MAP[category] ?? category;
+}
+
+export function localizeOption(option: string, lang: Language): string {
+  if (lang !== 'bn') return option;
+  return BN_OPTION_LABELS[option] ?? option;
+}
+
+export function localizeStimulusType(type: string, lang: Language): string {
+  if (lang !== 'bn') return type;
+  return BN_STIMULUS_TYPE_MAP[type] ?? type;
 }
 
 export function classifyScreeningOutcome(
@@ -79,7 +105,6 @@ export function classifyScreeningOutcome(
   const nonControlCorrectRatio =
     nonControlPool.filter((r) => r.isCorrect).length / nonControlPool.length;
 
-  // Excessive skipped items or ambiguous borderline accuracy triggers Inconclusive (C)
   if (unansweredRatio >= 0.6 && nonControlCorrectRatio < 0.5) {
     return 'C';
   }
@@ -136,7 +161,7 @@ export function computePlateScreeningResult(params: {
     id: `scr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     userId,
     testType,
-    testName: getTestDisplayName(testType),
+    testName: getTestDisplayName(testType, 'en'),
     completedAtIso: new Date().toISOString(),
     totalQuestions,
     correctCount,
@@ -219,7 +244,7 @@ export function computeArrangementScreeningResult(params: {
     id: `scr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     userId,
     testType: 'arrangement',
-    testName: getTestDisplayName('arrangement'),
+    testName: getTestDisplayName('arrangement', 'en'),
     completedAtIso: new Date().toISOString(),
     totalQuestions: totalTiles,
     correctCount: exactMatches,
@@ -236,12 +261,18 @@ export function computeArrangementScreeningResult(params: {
   };
 }
 
-export function getResultLabelDetails(label: ResultClassification): {
+export function getResultLabelDetails(
+  label: ResultClassification,
+  lang: Language = 'en'
+): {
   headline: string;
   badgeText: string;
   explanation: string;
   toneClass: string;
 } {
+  if (lang === 'bn') {
+    return BN_OUTCOME_DETAILS[label];
+  }
   switch (label) {
     case 'A':
       return {
@@ -270,8 +301,11 @@ export function getResultLabelDetails(label: ResultClassification): {
   }
 }
 
-export function formatDuration(seconds: number): string {
+export function formatDuration(seconds: number, lang: Language = 'en'): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
+  if (lang === 'bn') {
+    return `${mins} মি. ${secs.toString().padStart(2, '0')} সে.`;
+  }
   return `${mins}m ${secs.toString().padStart(2, '0')}s`;
 }

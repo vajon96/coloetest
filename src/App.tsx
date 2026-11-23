@@ -7,7 +7,7 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import { Contrast, Menu, Type, X } from 'lucide-react';
+import { Contrast, Globe, Menu, Type, X } from 'lucide-react';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ArrangementTestRunner } from './components/ArrangementTestRunner';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -19,6 +19,7 @@ import { ResultDashboard } from './components/ResultDashboard';
 import { UserDashboard } from './components/UserDashboard';
 import { DEFAULT_ARTICLES, DEFAULT_FAQS, DEFAULT_SITE_CONFIG } from './data/educationalContent';
 import { DEFAULT_EXPERIMENTAL_PLATES } from './data/experimentalPlates';
+import { BN_SITE_TEXT, Language } from './i18n/translations';
 import { auth, googleProvider, testConnection } from './lib/firebase';
 import {
   checkIsUserAdmin,
@@ -50,6 +51,7 @@ type AppView =
   | 'admin';
 
 export default function App() {
+  const [lang, setLang] = useState<Language>('bn');
   const [view, setView] = useState<AppView>('home');
   const [activeTestType, setActiveTestType] = useState<TestModuleId>('ishihara-inspired');
   const [activeResult, setActiveResult] = useState<ScreeningResult | null>(null);
@@ -73,6 +75,12 @@ export default function App() {
   const [guestScreenings, setGuestScreenings] = useState<ScreeningResult[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+
+  const isBn = lang === 'bn';
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('a11y-large-text', largeText);
@@ -211,7 +219,11 @@ export default function App() {
   };
 
   const participantLabel = firebaseUser
-    ? userProfile?.displayName || firebaseUser.email || 'Registered Participant'
+    ? userProfile?.displayName ||
+      firebaseUser.email ||
+      (isBn ? 'নিবন্ধিত অংশগ্রহণকারী' : 'Registered Participant')
+    : isBn
+    ? 'গেস্ট অংশগ্রহণকারী'
     : 'Guest Participant';
 
   return (
@@ -231,7 +243,7 @@ export default function App() {
 
             {/* Zone 2: Single-line Nav Links */}
             <nav
-              aria-label="Primary navigation"
+              aria-label={isBn ? 'প্রধান ন্যাভিগেশন' : 'Primary navigation'}
               className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
             >
               <button
@@ -246,7 +258,7 @@ export default function App() {
                 }}
                 className="hover:text-slate-900 hover:underline underline-offset-4 whitespace-nowrap shrink-0 transition-colors"
               >
-                Screenings
+                {isBn ? BN_SITE_TEXT.nav.screenings : 'Screenings'}
               </button>
               <button
                 type="button"
@@ -255,7 +267,7 @@ export default function App() {
                   view === 'knowledge' ? 'text-blue-700 font-semibold' : ''
                 }`}
               >
-                Knowledge Center
+                {isBn ? BN_SITE_TEXT.nav.knowledge : 'Knowledge Center'}
               </button>
               <button
                 type="button"
@@ -264,7 +276,13 @@ export default function App() {
                   view === 'dashboard' ? 'text-blue-700 font-semibold' : ''
                 }`}
               >
-                {firebaseUser ? 'Dashboard' : 'Account'}
+                {firebaseUser
+                  ? isBn
+                    ? BN_SITE_TEXT.nav.dashboard
+                    : 'Dashboard'
+                  : isBn
+                  ? BN_SITE_TEXT.nav.account
+                  : 'Account'}
               </button>
               {isAdmin && (
                 <button
@@ -274,7 +292,7 @@ export default function App() {
                     view === 'admin' ? 'text-blue-700 font-semibold' : ''
                   }`}
                 >
-                  Admin
+                  {isBn ? BN_SITE_TEXT.nav.admin : 'Admin'}
                 </button>
               )}
             </nav>
@@ -286,12 +304,20 @@ export default function App() {
                 onClick={() => handleStartTest('ishihara-inspired')}
                 className="hidden sm:inline-flex px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap shrink-0"
               >
-                Start Free Test
+                {isBn ? BN_SITE_TEXT.nav.startFreeTest : 'Start Free Test'}
               </button>
 
               <button
                 type="button"
-                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-label={
+                  mobileMenuOpen
+                    ? isBn
+                      ? 'মেনু বন্ধ করুন'
+                      : 'Close navigation menu'
+                    : isBn
+                    ? 'মেনু খুলুন'
+                    : 'Open navigation menu'
+                }
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
                 className="md:hidden p-2 rounded-lg border border-slate-300 text-slate-700"
               >
@@ -312,21 +338,27 @@ export default function App() {
                 onClick={() => navigate('home')}
                 className="block w-full text-left px-3 py-2 text-sm font-medium text-slate-800 rounded-lg hover:bg-slate-50"
               >
-                Screenings
+                {isBn ? BN_SITE_TEXT.nav.screenings : 'Screenings'}
               </button>
               <button
                 type="button"
                 onClick={() => navigate('knowledge')}
                 className="block w-full text-left px-3 py-2 text-sm font-medium text-slate-800 rounded-lg hover:bg-slate-50"
               >
-                Knowledge Center
+                {isBn ? BN_SITE_TEXT.nav.knowledge : 'Knowledge Center'}
               </button>
               <button
                 type="button"
                 onClick={() => navigate('dashboard')}
                 className="block w-full text-left px-3 py-2 text-sm font-medium text-slate-800 rounded-lg hover:bg-slate-50"
               >
-                {firebaseUser ? 'Dashboard' : 'Account & Guest Mode'}
+                {firebaseUser
+                  ? isBn
+                    ? BN_SITE_TEXT.nav.dashboard
+                    : 'Dashboard'
+                  : isBn
+                  ? BN_SITE_TEXT.nav.accountGuest
+                  : 'Account & Guest Mode'}
               </button>
               {isAdmin && (
                 <button
@@ -334,7 +366,7 @@ export default function App() {
                   onClick={() => navigate('admin')}
                   className="block w-full text-left px-3 py-2 text-sm font-medium text-blue-700 rounded-lg hover:bg-slate-50"
                 >
-                  Admin Dashboard
+                  {isBn ? 'অ্যাডমিন ড্যাশবোর্ড' : 'Admin Dashboard'}
                 </button>
               )}
               <button
@@ -342,7 +374,7 @@ export default function App() {
                 onClick={() => handleStartTest('ishihara-inspired')}
                 className="w-full px-4 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg"
               >
-                Start Free Test
+                {isBn ? BN_SITE_TEXT.nav.startFreeTest : 'Start Free Test'}
               </button>
             </div>
           )}
@@ -352,6 +384,7 @@ export default function App() {
         <main className="flex-1">
           {view === 'home' && (
             <Homepage
+              lang={lang}
               siteConfig={siteConfig}
               faqs={faqs}
               plateCounts={plateCounts}
@@ -362,6 +395,7 @@ export default function App() {
 
           {view === 'knowledge' && (
             <KnowledgeCenter
+              lang={lang}
               articles={articles}
               onStartScreening={() => {
                 navigate('home');
@@ -376,6 +410,7 @@ export default function App() {
 
           {view === 'prepare' && (
             <PreparationInstructions
+              lang={lang}
               testType={activeTestType}
               onConfirmStart={() => navigate('running')}
               onCancel={() => navigate('home')}
@@ -384,6 +419,7 @@ export default function App() {
 
           {view === 'running' && activeTestType !== 'arrangement' && (
             <PlateTestRunner
+              lang={lang}
               testType={activeTestType}
               allPlates={plates}
               userId={firebaseUser?.uid ?? null}
@@ -395,6 +431,7 @@ export default function App() {
 
           {view === 'running' && activeTestType === 'arrangement' && (
             <ArrangementTestRunner
+              lang={lang}
               userId={firebaseUser?.uid ?? null}
               onComplete={handleTestCompleted}
               onExit={() => navigate('home')}
@@ -404,6 +441,7 @@ export default function App() {
 
           {view === 'result' && activeResult && (
             <ResultDashboard
+              lang={lang}
               result={activeResult}
               participantLabel={participantLabel}
               onRetakeTest={handleStartTest}
@@ -414,6 +452,7 @@ export default function App() {
 
           {view === 'dashboard' && (
             <UserDashboard
+              lang={lang}
               firebaseUser={firebaseUser}
               userProfile={userProfile}
               savedScreenings={savedScreenings}
@@ -434,6 +473,7 @@ export default function App() {
 
           {view === 'admin' && (
             <AdminDashboard
+              lang={lang}
               isAdmin={isAdmin}
               articles={articles}
               faqs={faqs}
@@ -455,23 +495,35 @@ export default function App() {
             <div className="max-w-lg w-full bg-white border border-slate-200 rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 id="review-inst-title" className="text-lg font-bold text-slate-900">
-                  Display Preparation Reminder
+                  {isBn ? 'ডিসপ্লে প্রস্তুতির নির্দেশনা' : 'Display Preparation Reminder'}
                 </h2>
                 <button
                   type="button"
                   onClick={() => setShowInstructionsModal(false)}
-                  aria-label="Close instructions"
+                  aria-label={isBn ? 'নির্দেশনা বন্ধ করুন' : 'Close instructions'}
                   className="p-1 text-slate-500 hover:text-slate-900"
                 >
                   <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
               <ul className="space-y-2 text-xs text-slate-700 list-disc pl-5 leading-relaxed">
-                <li>Disable Night Light, Night Shift, True Tone, and blue-light filters.</li>
-                <li>Set comfortable, normal-to-high screen brightness.</li>
-                <li>Remove tinted glasses or color-altering filters.</li>
-                <li>Sit in a normally illuminated room at a comfortable distance.</li>
-                <li>Do not use screenshots or edited plate images.</li>
+                {isBn ? (
+                  <>
+                    <li>Night Light, Night Shift, True Tone ও ব্লু-লাইট ফিল্টার বন্ধ করুন।</li>
+                    <li>স্বস্তিদায়ক, মাঝারি-থেকে-উচ্চ স্ক্রিন উজ্জ্বলতা সেট করুন।</li>
+                    <li>রঙিন চশমা বা কালার ফিল্টার ব্যবহার করবেন না।</li>
+                    <li>স্বাভাবিক আলোকিত ঘরে স্বস্তিদায়ক দূরত্বে বসুন।</li>
+                    <li>টেস্ট প্লেটের স্ক্রিনশট বা সম্পাদিত ছবি ব্যবহার করবেন না।</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Disable Night Light, Night Shift, True Tone, and blue-light filters.</li>
+                    <li>Set comfortable, normal-to-high screen brightness.</li>
+                    <li>Remove tinted glasses or color-altering filters.</li>
+                    <li>Sit in a normally illuminated room at a comfortable distance.</li>
+                    <li>Do not use screenshots or edited plate images.</li>
+                  </>
+                )}
               </ul>
               <div className="flex justify-end pt-2">
                 <button
@@ -479,27 +531,38 @@ export default function App() {
                   onClick={() => setShowInstructionsModal(false)}
                   className="px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg"
                 >
-                  Resume Screening
+                  {isBn ? 'স্ক্রিনিং চালিয়ে যান' : 'Resume Screening'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Quiet Footer with Accessibility Controls */}
+        {/* Quiet Footer with Accessibility & Language Controls */}
         <footer className="bg-white border-t border-slate-200 mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
               <p className="text-sm font-bold text-slate-900">
-                ColorVision Test · Discover How You See Colors.
+                ColorVision Test ·{' '}
+                {isBn ? BN_SITE_TEXT.tagline : 'Discover How You See Colors.'}
               </p>
               <p className="text-xs text-slate-500 mt-1 max-w-xl">
-                Preliminary online color vision screening and educational platform. Not a certified
-                medical diagnostic device or occupational fitness substitute.
+                {isBn
+                  ? BN_SITE_TEXT.footer.desc
+                  : 'Preliminary online color vision screening and educational platform. Not a certified medical diagnostic device or occupational fitness substitute.'}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLang((prev) => (prev === 'bn' ? 'en' : 'bn'))}
+                aria-label="Toggle language between Bangla and English"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-800 text-xs font-semibold hover:bg-slate-100 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5" aria-hidden="true" />
+                {isBn ? 'ভাষা: বাংলা (EN)' : 'Language: EN (বাংলা)'}
+              </button>
               <button
                 type="button"
                 aria-pressed={largeText}
@@ -511,7 +574,7 @@ export default function App() {
                 }`}
               >
                 <Type className="w-3.5 h-3.5" aria-hidden="true" />
-                Large Text
+                {isBn ? BN_SITE_TEXT.footer.largeText : 'Large Text'}
               </button>
               <button
                 type="button"
@@ -524,7 +587,7 @@ export default function App() {
                 }`}
               >
                 <Contrast className="w-3.5 h-3.5" aria-hidden="true" />
-                High Contrast
+                {isBn ? BN_SITE_TEXT.footer.highContrast : 'High Contrast'}
               </button>
             </div>
           </div>

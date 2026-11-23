@@ -1,222 +1,312 @@
 import { jsPDF } from 'jspdf';
+import { Language } from '../i18n/translations';
 import { ScreeningResult } from '../types/vision';
-import { formatDuration, getResultLabelDetails } from './testEngine';
+import {
+  formatDuration,
+  getResultLabelDetails,
+  getTestDisplayName,
+  localizeCategory,
+} from './testEngine';
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const testLine = current ? `${current} ${word}` : word;
+    if (ctx.measureText(testLine).width <= maxWidth) {
+      current = testLine;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 
 export function generateScreeningPdfReport(
   result: ScreeningResult,
-  participantLabel: string
+  participantLabel: string,
+  lang: Language = 'bn'
 ): void {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 18;
-  const contentWidth = pageWidth - margin * 2;
-  let y = 18;
+  // Render crisp A4 canvas (1240 x 1754 at 150 DPI) so Unicode Bengali glyphs & conjuncts render cleanly
+  const W = 1240;
+  const H = 1754;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-  // Top Header Band
-  doc.setFillColor(15, 23, 42); // Deep Navy #0F172A
-  doc.rect(0, 0, pageWidth, 34, 'F');
+  const fontStack = '"Noto Sans Bengali", "Plus Jakarta Sans", "DM Sans", sans-serif';
+  const margin = 88;
+  const contentW = W - margin * 2;
+  const isBn = lang === 'bn';
 
-  // Vector Aperture Logo Mark
-  doc.setDrawColor(96, 165, 250);
-  doc.setLineWidth(0.9);
-  doc.circle(margin + 5, 17, 5, 'S');
-  doc.setFillColor(59, 130, 246);
-  doc.circle(margin + 5, 17, 2.1, 'F');
+  // Background
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('ColorVision Test', margin + 13, 15.5);
+  // Header Band
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(0, 0, W, 178);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(203, 213, 225);
-  doc.text('Discover How You See Colors.  |  Preliminary Screening & Educational Platform', margin + 13, 21.5);
+  // Vector Aperture Emblem
+  ctx.strokeStyle = '#60A5FA';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(margin + 28, 89, 26, 0, Math.PI * 2);
+  ctx.stroke();
 
-  y = 46;
+  ctx.fillStyle = '#3B82F6';
+  ctx.beginPath();
+  ctx.arc(margin + 28, 89, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `700 36px ${fontStack}`;
+  ctx.fillText('ColorVision Test', margin + 74, 84);
+
+  ctx.fillStyle = '#CBD5E1';
+  ctx.font = `400 20px ${fontStack}`;
+  ctx.fillText(
+    isBn
+      ? 'আপনি কীভাবে রঙ দেখেন তা জানুন।  |  প্রাথমিক স্ক্রিনিং ও শিক্ষামূলক প্ল্যাটফর্ম'
+      : 'Discover How You See Colors.  |  Preliminary Screening & Educational Platform',
+    margin + 74,
+    120
+  );
+
+  let y = 246;
 
   // Report Heading
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('COLOR VISION SCREENING REPORT', margin, y);
-  y += 7;
+  ctx.fillStyle = '#0F172A';
+  ctx.font = `700 38px ${fontStack}`;
+  ctx.fillText(
+    isBn ? 'COLOR VISION SCREENING REPORT / রঙ দৃষ্টি স্ক্রিনিং রিপোর্ট' : 'COLOR VISION SCREENING REPORT',
+    margin,
+    y
+  );
+  y += 28;
 
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(0.4);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(margin, y);
+  ctx.lineTo(W - margin, y);
+  ctx.stroke();
+  y += 42;
 
-  // Test Metadata Grid
-  const formattedDate = new Date(result.completedAtIso).toLocaleString();
-  doc.setFontSize(9.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Test Module:', margin, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(result.testName, margin + 32, y);
+  // Metadata
+  const localizedTestName = getTestDisplayName(result.testType, lang);
+  const dateText = new Date(result.completedAtIso).toLocaleString(isBn ? 'bn-BD' : 'en-US');
 
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Date Completed:', margin + 102, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(formattedDate, margin + 132, y);
-  y += 6.5;
+  ctx.font = `600 20px ${fontStack}`;
+  ctx.fillStyle = '#475569';
+  ctx.fillText(isBn ? 'পরীক্ষার মডিউল:' : 'Test Module:', margin, y);
+  ctx.font = `500 20px ${fontStack}`;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillText(localizedTestName, margin + 190, y);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Participant:', margin, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(participantLabel, margin + 32, y);
+  ctx.font = `600 20px ${fontStack}`;
+  ctx.fillStyle = '#475569';
+  ctx.fillText(isBn ? 'তারিখ:' : 'Date:', margin + 660, y);
+  ctx.font = `400 19px ${fontStack}`;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillText(dateText, margin + 740, y);
+  y += 36;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Duration:', margin + 102, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(15, 23, 42);
-  doc.text(formatDuration(result.durationSeconds), margin + 132, y);
-  y += 11;
+  ctx.font = `600 20px ${fontStack}`;
+  ctx.fillStyle = '#475569';
+  ctx.fillText(isBn ? 'অংশগ্রহণকারী:' : 'Participant:', margin, y);
+  ctx.font = `500 20px ${fontStack}`;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillText(participantLabel, margin + 190, y);
 
-  // Statistics Summary Box
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(margin, y, contentWidth, 26, 2, 2, 'FD');
+  ctx.font = `600 20px ${fontStack}`;
+  ctx.fillStyle = '#475569';
+  ctx.fillText(isBn ? 'সময়কাল:' : 'Duration:', margin + 660, y);
+  ctx.font = `500 20px ${fontStack}`;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillText(formatDuration(result.durationSeconds, lang), margin + 760, y);
+  y += 48;
+
+  // Statistics Strip
+  ctx.fillStyle = '#F8FAFC';
+  ctx.strokeStyle = '#E2E8F0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(margin, y, contentW, 134, 12);
+  ctx.fill();
+  ctx.stroke();
 
   const stats = [
-    { label: 'Total Items', value: String(result.totalQuestions) },
-    { label: 'Correct', value: String(result.correctCount) },
-    { label: 'Incorrect', value: String(result.incorrectCount) },
-    { label: 'Unanswered', value: String(result.unansweredCount) },
-    { label: 'Experimental Score', value: `${result.scorePercentage}%` },
+    { label: isBn ? 'মোট প্রশ্ন/টাইলস' : 'Total Items', value: String(result.totalQuestions) },
+    { label: isBn ? 'সঠিক' : 'Correct', value: String(result.correctCount) },
+    { label: isBn ? 'ভুল' : 'Incorrect', value: String(result.incorrectCount) },
+    { label: isBn ? 'অনুত্তরিত' : 'Unanswered', value: String(result.unansweredCount) },
+    {
+      label: isBn ? 'পরীক্ষামূলক স্কোর' : 'Experimental Score',
+      value: `${result.scorePercentage}%`,
+    },
   ];
-  const colW = contentWidth / stats.length;
-  stats.forEach((stat, idx) => {
-    const cx = margin + colW * idx + 5;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(stat.label.toUpperCase(), cx, y + 9);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(15, 23, 42);
-    doc.text(stat.value, cx, y + 18.5);
+
+  const colW = contentW / stats.length;
+  stats.forEach((st, idx) => {
+    const cx = margin + colW * idx + 22;
+    ctx.fillStyle = '#64748B';
+    ctx.font = `600 17px ${fontStack}`;
+    ctx.fillText(st.label, cx, y + 46);
+    ctx.fillStyle = '#0F172A';
+    ctx.font = `700 34px ${fontStack}`;
+    ctx.fillText(st.value, cx, y + 98);
   });
-  y += 34;
+  y += 172;
 
-  // Screening Result Box
-  const outcome = getResultLabelDetails(result.resultLabel);
-  doc.setFillColor(241, 245, 249);
-  doc.setDrawColor(203, 213, 225);
-  const outcomeLines = doc.splitTextToSize(outcome.explanation, contentWidth - 10);
-  const outcomeHeight = 20 + outcomeLines.length * 4.6;
-  doc.roundedRect(margin, y, contentWidth, outcomeHeight, 2, 2, 'FD');
+  // Outcome Card
+  const outcome = getResultLabelDetails(result.resultLabel, lang);
+  ctx.font = `400 20px ${fontStack}`;
+  const explLines = wrapCanvasText(ctx, outcome.explanation, contentW - 56);
+  const outcomeBoxH = 112 + explLines.length * 30;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(30, 58, 138);
-  doc.text(`SCREENING RESULT — ${outcome.badgeText.toUpperCase()}`, margin + 5, y + 7.5);
+  ctx.fillStyle = '#F1F5F9';
+  ctx.strokeStyle = '#CBD5E1';
+  ctx.beginPath();
+  ctx.roundRect(margin, y, contentW, outcomeBoxH, 12);
+  ctx.fill();
+  ctx.stroke();
 
-  doc.setFontSize(11.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text(outcome.headline, margin + 5, y + 14.5);
+  ctx.fillStyle = '#1D4ED8';
+  ctx.font = `700 18px ${fontStack}`;
+  ctx.fillText(
+    isBn ? `স্ক্রিনিং ফলাফল — ${outcome.badgeText}` : `SCREENING RESULT — ${outcome.badgeText}`,
+    margin + 28,
+    y + 42
+  );
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(51, 65, 85);
-  doc.text(outcomeLines, margin + 5, y + 20.5);
-  y += outcomeHeight + 10;
+  ctx.fillStyle = '#0F172A';
+  ctx.font = `700 25px ${fontStack}`;
+  ctx.fillText(outcome.headline, margin + 28, y + 80);
 
-  // Category Performance Chart (Vector Bars)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Performance by Screening Category', margin, y);
-  y += 6;
+  ctx.fillStyle = '#334155';
+  ctx.font = `400 20px ${fontStack}`;
+  explLines.forEach((line, i) => {
+    ctx.fillText(line, margin + 28, y + 118 + i * 30);
+  });
+  y += outcomeBoxH + 48;
 
-  const barMaxW = 72;
-  result.categoryBreakdown.forEach((cat) => {
-    if (y > 235) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    const labelText = cat.category.length > 34 ? `${cat.category.slice(0, 32)}...` : cat.category;
-    doc.text(labelText, margin, y + 4);
+  // Category Breakdown Vector Chart
+  ctx.fillStyle = '#0F172A';
+  ctx.font = `700 24px ${fontStack}`;
+  ctx.fillText(
+    isBn ? 'ক্যাটাগরি অনুযায়ী পারফরম্যান্স' : 'Performance by Screening Category',
+    margin,
+    y
+  );
+  y += 38;
 
-    const barX = margin + 74;
-    doc.setFillColor(226, 232, 240);
-    doc.rect(barX, y + 0.8, barMaxW, 4, 'F');
+  const barStartX = margin + 410;
+  const barMaxW = 460;
+  result.categoryBreakdown.slice(0, 8).forEach((cat) => {
+    const label = localizeCategory(cat.category, lang);
+    const shortLabel = label.length > 34 ? `${label.slice(0, 32)}...` : label;
+
+    ctx.fillStyle = '#1E293B';
+    ctx.font = `500 19px ${fontStack}`;
+    ctx.fillText(shortLabel, margin, y + 20);
+
+    ctx.fillStyle = '#E2E8F0';
+    ctx.fillRect(barStartX, y + 3, barMaxW, 22);
 
     const fillW = (barMaxW * Math.max(0, Math.min(100, cat.accuracyPercent))) / 100;
-    doc.setFillColor(29, 78, 216);
-    doc.rect(barX, y + 0.8, fillW, 4, 'F');
+    ctx.fillStyle = '#1D4ED8';
+    ctx.fillRect(barStartX, y + 3, fillW, 22);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`${cat.correct}/${cat.total} (${cat.accuracyPercent}%)`, barX + barMaxW + 4, y + 4);
-
-    y += 8.5;
+    ctx.fillStyle = '#0F172A';
+    ctx.font = `600 18px ${fontStack}`;
+    ctx.fillText(
+      `${cat.correct}/${cat.total} (${cat.accuracyPercent}%)`,
+      barStartX + barMaxW + 20,
+      y + 20
+    );
+    y += 44;
   });
 
   if (typeof result.arrangementErrors === 'number') {
-    y += 2;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(51, 65, 85);
-    doc.text(
-      `Total Hue Sequence Displacement Error Index: ${result.arrangementErrors} (0 indicates exact match with reference gradient)`,
+    y += 12;
+    ctx.fillStyle = '#334155';
+    ctx.font = `500 19px ${fontStack}`;
+    ctx.fillText(
+      isBn
+        ? `মোট রঙের ক্রম বিচ্যুতি সূচক: ${result.arrangementErrors} (০ মানে রেফারেন্স ক্রমের সাথে হুবহু মিল)`
+        : `Total Hue Sequence Displacement Error Index: ${result.arrangementErrors} (0 = exact match)`,
       margin,
       y
     );
-    y += 8;
   }
 
-  // Scientific Limitations & Mandatory Disclaimer
-  y = Math.max(y + 6, 224);
-  if (y > 245) {
-    doc.addPage();
-    y = 24;
-  }
-
-  doc.setFillColor(254, 249, 195);
-  doc.setDrawColor(234, 179, 8);
-  const mandatoryDisclaimer =
+  // Disclaimer Box pinned near bottom
+  const mandatoryEn =
     'This report is generated from an online preliminary screening exercise. It is not a medical diagnosis, occupational fitness certificate, or substitute for a standardized clinical color vision examination.';
-  const limitationsText =
-    'Important Scientific Limitations: Consumer monitors and mobile displays vary significantly in color gamut, white balance, gamma, brightness, and ambient room reflections. Ishihara-inspired plates primarily explore red-green chromatic discrimination, while online blue-yellow modules are experimental. Definitive assessment requires calibrated clinical tools (such as printed pseudoisochromatic plates under Illuminant C/D65 or a Nagel anomaloscope) administered by a qualified optometrist or ophthalmologist.';
+  const mandatoryBn =
+    'এই প্রতিবেদনটি একটি অনলাইন প্রাথমিক স্ক্রিনিং অনুশীলন থেকে তৈরি। এটি কোনো চিকিৎসাগত রোগ নির্ণয়, পেশাগত ফিটনেস সনদ বা মানসম্মত ক্লিনিক্যাল রঙ দৃষ্টি পরীক্ষার বিকল্প নয়।';
+  const limText = isBn
+    ? 'বৈজ্ঞানিক সীমাবদ্ধতা: সাধারণ মনিটর ও মোবাইলের রঙ, উজ্জ্বলতা, ক্যালিব্রেশন ও ঘরের আলোর পার্থক্যের কারণে ফলাফল প্রভাবিত হতে পারে। নিশ্চিত মূল্যায়নের জন্য অনুগ্রহ করে একজন যোগ্য অপটোমেট্রিস্ট বা চক্ষু বিশেষজ্ঞের পরামর্শ নিন।'
+    : 'Important Scientific Limitations: Consumer displays vary in color gamut, white balance, brightness, and ambient reflections. Consult a qualified optometrist or ophthalmologist for clinical evaluation.';
 
-  const discLines = doc.splitTextToSize(mandatoryDisclaimer, contentWidth - 10);
-  const limLines = doc.splitTextToSize(limitationsText, contentWidth - 10);
-  const boxHeight = 14 + (discLines.length + limLines.length) * 4.2;
+  ctx.font = `600 18px ${fontStack}`;
+  const mLines = wrapCanvasText(ctx, isBn ? `${mandatoryBn} (${mandatoryEn})` : mandatoryEn, contentW - 56);
+  ctx.font = `400 17px ${fontStack}`;
+  const lLines = wrapCanvasText(ctx, limText, contentW - 56);
 
-  doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(113, 63, 18);
-  doc.text('MEDICAL DISCLAIMER & SCIENTIFIC LIMITATIONS', margin + 5, y + 7);
+  const discBoxH = 82 + mLines.length * 26 + lLines.length * 24;
+  const discY = H - discBoxH - 96;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(66, 32, 6);
-  doc.text(discLines, margin + 5, y + 12.5);
+  ctx.fillStyle = '#FEF9C3';
+  ctx.strokeStyle = '#EAB308';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(margin, discY, contentW, discBoxH, 12);
+  ctx.fill();
+  ctx.stroke();
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(87, 54, 20);
-  doc.text(limLines, margin + 5, y + 14 + discLines.length * 4.2);
+  ctx.fillStyle = '#713F12';
+  ctx.font = `700 19px ${fontStack}`;
+  ctx.fillText(
+    isBn ? 'চিকিৎসা সতর্কতা ও বৈজ্ঞানিক সীমাবদ্ধতা' : 'MEDICAL DISCLAIMER & SCIENTIFIC LIMITATIONS',
+    margin + 28,
+    discY + 38
+  );
+
+  ctx.fillStyle = '#422006';
+  ctx.font = `600 18px ${fontStack}`;
+  mLines.forEach((line, i) => {
+    ctx.fillText(line, margin + 28, discY + 72 + i * 26);
+  });
+
+  ctx.fillStyle = '#573614';
+  ctx.font = `400 17px ${fontStack}`;
+  lLines.forEach((line, i) => {
+    ctx.fillText(line, margin + 28, discY + 80 + mLines.length * 26 + i * 24);
+  });
 
   // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 10;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text(`Report ID: ${result.id}  |  Generated by ColorVision Test`, margin, footerY);
+  ctx.fillStyle = '#64748B';
+  ctx.font = `400 17px ${fontStack}`;
+  ctx.fillText(
+    `Report ID: ${result.id}  |  ColorVision Test`,
+    margin,
+    H - 42
+  );
 
-  doc.save(`ColorVision_Screening_Report_${result.id.slice(-8)}.pdf`);
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+  pdf.save(`ColorVision_Screening_Report_${result.id.slice(-8)}.pdf`);
 }

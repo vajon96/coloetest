@@ -1,34 +1,49 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, Search, ShieldAlert } from 'lucide-react';
+import { BN_ARTICLES, Language } from '../i18n/translations';
 import { EducationalArticle } from '../types/vision';
 
 interface KnowledgeCenterProps {
+  lang: Language;
   articles: EducationalArticle[];
   onStartScreening: () => void;
 }
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
+  lang,
   articles,
   onStartScreening,
 }) => {
-  const publishedArticles = useMemo(
-    () => articles.filter((a) => a.published).sort((a, b) => a.order - b.order),
-    [articles]
-  );
+  const isBn = lang === 'bn';
 
+  const publishedArticles = useMemo(() => {
+    const base = articles.filter((a) => a.published).sort((a, b) => a.order - b.order);
+    if (!isBn) return base;
+    return base.map((art) => {
+      const bnMatch = BN_ARTICLES.find((b) => b.id === art.id);
+      return bnMatch ?? art;
+    });
+  }, [articles, isBn]);
+
+  const allTopicsLabel = isBn ? 'সব বিষয়' : 'All Topics';
   const categories = useMemo(
-    () => ['All Topics', ...Array.from(new Set(publishedArticles.map((a) => a.category)))],
-    [publishedArticles]
+    () => [allTopicsLabel, ...Array.from(new Set(publishedArticles.map((a) => a.category)))],
+    [publishedArticles, allTopicsLabel]
   );
 
-  const [selectedCategory, setSelectedCategory] = useState('All Topics');
+  const [selectedCategory, setSelectedCategory] = useState(allTopicsLabel);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeId, setActiveId] = useState<string>(publishedArticles[0]?.id ?? '');
+
+  // Keep category selection aligned when language switches
+  const activeCategory = categories.includes(selectedCategory)
+    ? selectedCategory
+    : allTopicsLabel;
 
   const filteredArticles = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return publishedArticles.filter((art) => {
-      const catOk = selectedCategory === 'All Topics' || art.category === selectedCategory;
+      const catOk = activeCategory === allTopicsLabel || art.category === activeCategory;
       const textOk =
         !term ||
         art.title.toLowerCase().includes(term) ||
@@ -36,7 +51,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         art.content.toLowerCase().includes(term);
       return catOk && textOk;
     });
-  }, [publishedArticles, selectedCategory, searchTerm]);
+  }, [publishedArticles, activeCategory, allTopicsLabel, searchTerm]);
 
   const activeArticle =
     filteredArticles.find((a) => a.id === activeId) ?? filteredArticles[0] ?? null;
@@ -46,14 +61,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
           <p className="text-xs font-mono uppercase tracking-wider text-blue-700 mb-2">
-            Educational Knowledge Center
+            {isBn ? 'শিক্ষামূলক জ্ঞানকেন্দ্র' : 'Educational Knowledge Center'}
           </p>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
-            Color Vision Science &amp; Clinical Reference
+            {isBn
+              ? 'রঙ দৃষ্টি বিজ্ঞান ও ক্লিনিক্যাল তথ্যভান্ডার'
+              : 'Color Vision Science & Clinical Reference'}
           </h1>
           <p className="text-sm sm:text-base text-slate-600">
-            Evidence-based educational guides on cone physiology, inherited and acquired color
-            vision deficiencies, and clinical diagnostic standards.
+            {isBn
+              ? 'কোন কোষের শারীরতত্ত্ব, বংশগত ও অর্জিত রঙ দৃষ্টি ত্রুটি এবং ক্লিনিক্যাল পরীক্ষা পদ্ধতি সম্পর্কে তথ্যনির্ভর প্রবন্ধ।'
+              : 'Evidence-based educational guides on cone physiology, inherited and acquired color vision deficiencies, and clinical diagnostic standards.'}
           </p>
         </div>
 
@@ -62,7 +80,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
           onClick={onStartScreening}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 transition-colors"
         >
-          Go to Screening Tests
+          {isBn ? 'স্ক্রিনিং পরীক্ষায় যান' : 'Go to Screening Tests'}
           <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
@@ -76,7 +94,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
               type="button"
               onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                selectedCategory === cat
+                activeCategory === cat
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -95,8 +113,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
             type="search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search vision science topics..."
-            aria-label="Search educational articles"
+            placeholder={isBn ? 'বিষয় খুঁজুন...' : 'Search vision science topics...'}
+            aria-label={isBn ? 'শিক্ষামূলক প্রবন্ধ খুঁজুন' : 'Search educational articles'}
             className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-700"
           />
         </div>
@@ -107,7 +125,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
         <div className="lg:col-span-4 space-y-2">
           {filteredArticles.length === 0 ? (
             <div className="p-6 bg-white border border-slate-200 rounded-xl text-sm text-slate-600">
-              No articles matched your search filter.
+              {isBn ? 'আপনার অনুসন্ধানের সাথে কোনো প্রবন্ধ মেলেনি।' : 'No articles matched your search filter.'}
             </div>
           ) : (
             filteredArticles.map((art, index) => {
@@ -153,21 +171,24 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({
               </div>
 
               <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 mb-6">
-                <strong className="font-semibold text-slate-900">Medical Reference:</strong>{' '}
+                <strong className="font-semibold text-slate-900">
+                  {isBn ? 'তথ্যসূত্র:' : 'Medical Reference:'}
+                </strong>{' '}
                 {activeArticle.reference}
               </div>
 
               <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
                 <ShieldAlert className="w-4 h-4 text-amber-800 shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="text-xs text-amber-900 leading-relaxed">
-                  This educational material provides general physiological information and is not a
-                  substitute for individualized medical diagnosis or ophthalmic consultation.
+                  {isBn
+                    ? 'এই শিক্ষামূলক তথ্য সাধারণ শারীরবৃত্তীয় জ্ঞান প্রদানের জন্য; এটি ব্যক্তিগত চিকিৎসাগত রোগ নির্ণয় বা চক্ষু বিশেষজ্ঞের পরামর্শের বিকল্প নয়।'
+                    : 'This educational material provides general physiological information and is not a substitute for individualized medical diagnosis or ophthalmic consultation.'}
                 </p>
               </div>
             </article>
           ) : (
             <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-sm text-slate-600">
-              Select an educational topic on the left to read.
+              {isBn ? 'পড়ার জন্য বাম পাশ থেকে একটি বিষয় নির্বাচন করুন।' : 'Select an educational topic on the left to read.'}
             </div>
           )}
         </div>

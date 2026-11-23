@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Plus Jakarta Sans", "Noto Sans Bengali", system-ui, -apple-system, sans-serif;
+  --font-sans: "DM Sans", "Noto Sans Bengali", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "Noto Sans Bengali", ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {

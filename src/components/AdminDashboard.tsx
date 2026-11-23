@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Database, Download, Plus, Save, ShieldAlert, Trash2 } from 'lucide-react';
+import { Language } from '../i18n/translations';
 import {
   deleteArticleAdmin,
   deleteFaqAdmin,
@@ -32,6 +33,7 @@ import {
 import { PseudoisochromaticPlate } from './PseudoisochromaticPlate';
 
 interface AdminDashboardProps {
+  lang: Language;
   isAdmin: boolean;
   articles: EducationalArticle[];
   faqs: FaqItem[];
@@ -43,6 +45,7 @@ interface AdminDashboardProps {
 type AdminTab = 'overview' | 'articles' | 'faqs' | 'plates' | 'settings';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  lang,
   isAdmin,
   articles,
   faqs,
@@ -50,6 +53,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   siteConfig,
   onRefreshPublicContent,
 }) => {
+  const isBn = lang === 'bn';
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalScreenings, setTotalScreenings] = useState(0);
@@ -58,13 +62,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Editable Site Config State
   const [draftConfig, setDraftConfig] = useState<SiteConfig>(siteConfig);
   useEffect(() => {
     setDraftConfig(siteConfig);
   }, [siteConfig]);
 
-  // Article Editor State
   const [editingArticle, setEditingArticle] = useState<EducationalArticle>({
     id: `art_${Date.now()}`,
     slug: 'new-topic',
@@ -77,7 +79,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     published: true,
   });
 
-  // FAQ Editor State
   const [editingFaq, setEditingFaq] = useState<FaqItem>({
     id: `faq_${Date.now()}`,
     question: '',
@@ -85,7 +86,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     order: faqs.length + 1,
   });
 
-  // Plate Editor State
   const [editingPlate, setEditingPlate] = useState<ExperimentalPlate>({
     id: `plate_${Date.now()}`,
     module: 'ishihara-inspired',
@@ -138,17 +138,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return {
         module:
           mod === 'ishihara-inspired'
-            ? 'Ishihara-Inspired'
+            ? isBn
+              ? 'ইশিহারা'
+              : 'Ishihara-Inspired'
             : mod === 'red-green'
-            ? 'Red-Green'
+            ? isBn
+              ? 'লাল-সবুজ'
+              : 'Red-Green'
             : mod === 'blue-yellow'
-            ? 'Blue-Yellow'
+            ? isBn
+              ? 'নীল-হলুদ'
+              : 'Blue-Yellow'
+            : isBn
+            ? 'রঙ সাজানো'
             : 'Arrangement',
         Completions: subset.length,
         AvgScore: avgScore,
       };
     });
-  }, [anonymousStats]);
+  }, [anonymousStats, isBn]);
 
   if (!isAdmin) {
     return (
@@ -156,11 +164,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="bg-white border border-slate-200 rounded-xl p-10">
           <ShieldAlert className="w-10 h-10 text-amber-700 mx-auto mb-3" aria-hidden="true" />
           <h1 className="text-xl font-bold text-slate-900 mb-2">
-            Restricted Administration Area
+            {isBn ? 'সংরক্ষিত অ্যাডমিন প্যানেল' : 'Restricted Administration Area'}
           </h1>
           <p className="text-sm text-slate-600">
-            Access to anonymized telemetry, plate configuration, and content management requires an
-            authorized administrator account.
+            {isBn
+              ? 'নামহীন পরিসংখ্যান, প্লেট কনফিগারেশন এবং কনটেন্ট পরিচালনার জন্য অনুমোদিত অ্যাডমিন অ্যাকাউন্ট প্রয়োজন।'
+              : 'Access to anonymized telemetry, plate configuration, and content management requires an authorized administrator account.'}
           </p>
         </div>
       </section>
@@ -192,14 +201,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
           <p className="text-xs font-mono uppercase tracking-wider text-blue-700 mb-1">
-            Role-Protected Console
+            {isBn ? 'রোল-ভিত্তিক নিয়ন্ত্রিত কনসোল' : 'Role-Protected Console'}
           </p>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Admin Management Dashboard
+            {isBn ? 'অ্যাডমিন ম্যানেজমেন্ট ড্যাশবোর্ড' : 'Admin Management Dashboard'}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Aggregated anonymous metrics, educational content, experimental plates, and module
-            availability.
+            {isBn
+              ? 'সামগ্রিক নামহীন পরিসংখ্যান, শিক্ষামূলক প্রবন্ধ, পরীক্ষামূলক প্লেট এবং মডিউল নিয়ন্ত্রণ।'
+              : 'Aggregated anonymous metrics, educational content, experimental plates, and module availability.'}
           </p>
         </div>
 
@@ -210,7 +220,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               try {
                 await seedDefaultContentToFirestore();
                 await onRefreshPublicContent();
-                notify('Sample experimental plates, 10 educational articles, FAQs, and site config synced to Firestore.');
+                notify(
+                  isBn
+                    ? 'নমুনা প্লেট, ১০টি প্রবন্ধ, FAQ এবং সাইট কনফিগ Firestore-এ সংরক্ষিত হয়েছে।'
+                    : 'Sample experimental plates, 10 educational articles, FAQs, and site config synced to Firestore.'
+                );
               } catch (err) {
                 setErrorMessage(err instanceof Error ? err.message : 'Seed failed.');
               }
@@ -218,7 +232,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 bg-white text-slate-800 text-xs font-semibold rounded-lg hover:bg-slate-50"
           >
             <Database className="w-4 h-4" aria-hidden="true" />
-            Sync Sample Data to Firestore
+            {isBn ? 'Firestore-এ নমুনা তথ্য সিঙ্ক করুন' : 'Sync Sample Data to Firestore'}
           </button>
           <button
             type="button"
@@ -226,7 +240,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800"
           >
             <Download className="w-4 h-4" aria-hidden="true" />
-            Export Anonymous CSV
+            {isBn ? 'নামহীন CSV এক্সপোর্ট' : 'Export Anonymous CSV'}
           </button>
         </div>
       </div>
@@ -246,11 +260,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="flex flex-wrap gap-1.5 p-1 bg-slate-200/70 rounded-lg mb-8 w-fit">
         {(
           [
-            { id: 'overview', label: 'Overview & Telemetry' },
-            { id: 'articles', label: 'Educational Articles' },
-            { id: 'faqs', label: 'FAQs' },
-            { id: 'plates', label: 'Experimental Plates' },
-            { id: 'settings', label: 'Site & Availability' },
+            { id: 'overview', label: isBn ? 'সারসংক্ষেপ ও পরিসংখ্যান' : 'Overview & Telemetry' },
+            { id: 'articles', label: isBn ? 'শিক্ষামূলক প্রবন্ধ' : 'Educational Articles' },
+            { id: 'faqs', label: isBn ? 'প্রশ্নোত্তর (FAQ)' : 'FAQs' },
+            { id: 'plates', label: isBn ? 'পরীক্ষামূলক প্লেট' : 'Experimental Plates' },
+            { id: 'settings', label: isBn ? 'সাইট ও পরীক্ষা নিয়ন্ত্রণ' : 'Site & Availability' },
           ] as Array<{ id: AdminTab; label: string }>
         ).map((tab) => (
           <button
@@ -273,25 +287,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-200 rounded-xl p-5">
-              <p className="text-xs font-mono text-slate-500">Registered Users</p>
+              <p className="text-xs font-mono text-slate-500">
+                {isBn ? 'নিবন্ধিত ব্যবহারকারী' : 'Registered Users'}
+              </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-slate-900 mt-1">
                 {loadingStats ? '...' : totalUsers}
               </p>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-5">
-              <p className="text-xs font-mono text-slate-500">Completed Tests</p>
+              <p className="text-xs font-mono text-slate-500">
+                {isBn ? 'সম্পন্ন পরীক্ষা' : 'Completed Tests'}
+              </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-slate-900 mt-1">
                 {loadingStats ? '...' : totalScreenings}
               </p>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-5">
-              <p className="text-xs font-mono text-slate-500">Anonymous Stat Records</p>
+              <p className="text-xs font-mono text-slate-500">
+                {isBn ? 'নামহীন পরিসংখ্যান রেকর্ড' : 'Anonymous Stat Records'}
+              </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-slate-900 mt-1">
                 {loadingStats ? '...' : anonymousStats.length}
               </p>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-5">
-              <p className="text-xs font-mono text-slate-500">Active Plates</p>
+              <p className="text-xs font-mono text-slate-500">
+                {isBn ? 'সক্রিয় প্লেট' : 'Active Plates'}
+              </p>
               <p className="text-3xl font-mono font-bold tabular-nums text-slate-900 mt-1">
                 {plates.filter((p) => p.enabled).length}
               </p>
@@ -301,7 +323,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="grid lg:grid-cols-12 gap-6">
             <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6">
               <h2 className="text-base font-bold text-slate-900 mb-4">
-                Test Category Completions &amp; Average Experimental Score
+                {isBn
+                  ? 'ক্যাটাগরি অনুযায়ী সম্পন্ন পরীক্ষা ও গড় স্কোর'
+                  : 'Test Category Completions & Average Experimental Score'}
               </h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -319,21 +343,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6">
               <h2 className="text-base font-bold text-slate-900 mb-3">
-                Recent Anonymized Telemetry (Zero PII)
+                {isBn ? 'সাম্প্রতিক নামহীন পরিসংখ্যান (PII-মুক্ত)' : 'Recent Anonymized Telemetry (Zero PII)'}
               </h2>
               {anonymousStats.length === 0 ? (
                 <p className="text-xs text-slate-500 py-8 text-center">
-                  No anonymized records recorded yet. Completed screenings by signed-in users log
-                  de-identified telemetry automatically.
+                  {isBn
+                    ? 'এখনো কোনো নামহীন রেকর্ড সংরক্ষিত হয়নি।'
+                    : 'No anonymized records recorded yet.'}
                 </p>
               ) : (
                 <div className="overflow-x-auto max-h-64">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 text-slate-600 font-mono uppercase">
                       <tr>
-                        <th className="py-2 px-2 border-b border-slate-200">Module</th>
-                        <th className="py-2 px-2 border-b border-slate-200">Score</th>
-                        <th className="py-2 px-2 border-b border-slate-200">Outcome</th>
+                        <th className="py-2 px-2 border-b border-slate-200">
+                          {isBn ? 'মডিউল' : 'Module'}
+                        </th>
+                        <th className="py-2 px-2 border-b border-slate-200">
+                          {isBn ? 'স্কোর' : 'Score'}
+                        </th>
+                        <th className="py-2 px-2 border-b border-slate-200">
+                          {isBn ? 'ফলাফল' : 'Outcome'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -341,7 +372,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <tr key={s.id}>
                           <td className="py-2 px-2 text-slate-800">{s.testType}</td>
                           <td className="py-2 px-2 font-mono tabular-nums">{s.scorePercentage}%</td>
-                          <td className="py-2 px-2 font-mono">Label {s.resultLabel}</td>
+                          <td className="py-2 px-2 font-mono">
+                            {isBn ? `ধাপ ${s.resultLabel}` : `Label ${s.resultLabel}`}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -357,10 +390,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'articles' && (
         <div className="grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-            <h2 className="text-base font-bold text-slate-900">Create / Edit Article</h2>
+            <h2 className="text-base font-bold text-slate-900">
+              {isBn ? 'প্রবন্ধ তৈরি / সম্পাদনা' : 'Create / Edit Article'}
+            </h2>
             <input
               type="text"
-              placeholder="Article Title"
+              placeholder={isBn ? 'শিরোনাম' : 'Article Title'}
               value={editingArticle.title}
               onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
@@ -368,7 +403,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="text"
-                placeholder="Category"
+                placeholder={isBn ? 'ক্যাটাগরি' : 'Category'}
                 value={editingArticle.category}
                 onChange={(e) =>
                   setEditingArticle({ ...editingArticle, category: e.target.value })
@@ -377,7 +412,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               />
               <input
                 type="number"
-                placeholder="Order"
+                placeholder={isBn ? 'ক্রম' : 'Order'}
                 value={editingArticle.order}
                 onChange={(e) =>
                   setEditingArticle({ ...editingArticle, order: Number(e.target.value) || 0 })
@@ -387,21 +422,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
             <textarea
               rows={2}
-              placeholder="Concise summary"
+              placeholder={isBn ? 'সংক্ষিপ্তসার' : 'Concise summary'}
               value={editingArticle.summary}
               onChange={(e) => setEditingArticle({ ...editingArticle, summary: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
             />
             <textarea
               rows={5}
-              placeholder="Full educational content..."
+              placeholder={isBn ? 'বিস্তারিত প্রবন্ধ...' : 'Full educational content...'}
               value={editingArticle.content}
               onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
             />
             <input
               type="text"
-              placeholder="Medical Reference Citation"
+              placeholder={isBn ? 'তথ্যসূত্র' : 'Medical Reference Citation'}
               value={editingArticle.reference}
               onChange={(e) =>
                 setEditingArticle({ ...editingArticle, reference: e.target.value })
@@ -416,20 +451,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setEditingArticle({ ...editingArticle, published: e.target.checked })
                 }
               />
-              Published in Knowledge Center
+              {isBn ? 'জ্ঞানকেন্দ্রে প্রকাশিত' : 'Published in Knowledge Center'}
             </label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={async () => {
                   try {
-                    const slug = editingArticle.title
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]+/g, '-')
-                      .replace(/(^-|-$)/g, '') || 'article';
+                    const slug =
+                      editingArticle.title
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/(^-|-$)/g, '') || 'article';
                     await saveArticleAdmin({ ...editingArticle, slug });
                     await onRefreshPublicContent();
-                    notify(`Saved article "${editingArticle.title}".`);
+                    notify(isBn ? 'প্রবন্ধ সংরক্ষিত হয়েছে।' : `Saved article "${editingArticle.title}".`);
                   } catch (err) {
                     setErrorMessage(err instanceof Error ? err.message : 'Save failed.');
                   }
@@ -437,7 +473,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-xs font-semibold rounded-lg hover:bg-blue-800"
               >
                 <Save className="w-3.5 h-3.5" aria-hidden="true" />
-                Save Article
+                {isBn ? 'প্রবন্ধ সংরক্ষণ' : 'Save Article'}
               </button>
               <button
                 type="button"
@@ -457,14 +493,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="px-3 py-2 border border-slate-300 text-xs font-medium rounded-lg"
               >
                 <Plus className="w-3.5 h-3.5 inline mr-1" aria-hidden="true" />
-                New
+                {isBn ? 'নতুন' : 'New'}
               </button>
             </div>
           </div>
 
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 space-y-3">
             <h2 className="text-base font-bold text-slate-900 mb-2">
-              Articles ({articles.length})
+              {isBn ? `প্রবন্ধসমূহ (${articles.length})` : `Articles (${articles.length})`}
             </h2>
             {articles.map((art) => (
               <div
@@ -473,7 +509,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               >
                 <div>
                   <p className="text-xs font-mono text-slate-500">
-                    #{art.order} · {art.category} · {art.published ? 'Published' : 'Draft'}
+                    #{art.order} · {art.category} · {art.published ? (isBn ? 'প্রকাশিত' : 'Published') : (isBn ? 'খসড়া' : 'Draft')}
                   </p>
                   <h3 className="text-sm font-bold text-slate-900">{art.title}</h3>
                 </div>
@@ -483,14 +519,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onClick={() => setEditingArticle(art)}
                     className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-medium rounded-lg"
                   >
-                    Edit
+                    {isBn ? 'সম্পাদনা' : 'Edit'}
                   </button>
                   <button
                     type="button"
                     onClick={async () => {
                       await deleteArticleAdmin(art.id);
                       await onRefreshPublicContent();
-                      notify(`Deleted article "${art.title}".`);
+                      notify(isBn ? 'প্রবন্ধ মুছে ফেলা হয়েছে।' : `Deleted article "${art.title}".`);
                     }}
                     className="p-1.5 bg-white border border-rose-200 text-rose-700 rounded-lg"
                     aria-label={`Delete ${art.title}`}
@@ -508,24 +544,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'faqs' && (
         <div className="grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-4">
-            <h2 className="text-base font-bold text-slate-900">Create / Edit FAQ</h2>
+            <h2 className="text-base font-bold text-slate-900">
+              {isBn ? 'FAQ তৈরি / সম্পাদনা' : 'Create / Edit FAQ'}
+            </h2>
             <input
               type="text"
-              placeholder="Question"
+              placeholder={isBn ? 'প্রশ্ন' : 'Question'}
               value={editingFaq.question}
               onChange={(e) => setEditingFaq({ ...editingFaq, question: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
             />
             <textarea
               rows={4}
-              placeholder="Answer"
+              placeholder={isBn ? 'উত্তর' : 'Answer'}
               value={editingFaq.answer}
               onChange={(e) => setEditingFaq({ ...editingFaq, answer: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg"
             />
             <input
               type="number"
-              placeholder="Order"
+              placeholder={isBn ? 'ক্রম' : 'Order'}
               value={editingFaq.order}
               onChange={(e) =>
                 setEditingFaq({ ...editingFaq, order: Number(e.target.value) || 0 })
@@ -538,12 +576,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={async () => {
                   await saveFaqAdmin(editingFaq);
                   await onRefreshPublicContent();
-                  notify('Saved FAQ entry.');
+                  notify(isBn ? 'FAQ সংরক্ষিত হয়েছে।' : 'Saved FAQ entry.');
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-xs font-semibold rounded-lg"
               >
                 <Save className="w-3.5 h-3.5" aria-hidden="true" />
-                Save FAQ
+                {isBn ? 'FAQ সংরক্ষণ' : 'Save FAQ'}
               </button>
               <button
                 type="button"
@@ -557,13 +595,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 }
                 className="px-3 py-2 border border-slate-300 text-xs font-medium rounded-lg"
               >
-                New
+                {isBn ? 'নতুন' : 'New'}
               </button>
             </div>
           </div>
 
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 space-y-3">
-            <h2 className="text-base font-bold text-slate-900 mb-2">FAQs ({faqs.length})</h2>
+            <h2 className="text-base font-bold text-slate-900 mb-2">
+              {isBn ? `প্রশ্নোত্তর (${faqs.length})` : `FAQs (${faqs.length})`}
+            </h2>
             {faqs.map((faq) => (
               <div
                 key={faq.id}
@@ -580,14 +620,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onClick={() => setEditingFaq(faq)}
                     className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-medium rounded-lg"
                   >
-                    Edit
+                    {isBn ? 'সম্পাদনা' : 'Edit'}
                   </button>
                   <button
                     type="button"
                     onClick={async () => {
                       await deleteFaqAdmin(faq.id);
                       await onRefreshPublicContent();
-                      notify('Deleted FAQ entry.');
+                      notify(isBn ? 'FAQ মুছে ফেলা হয়েছে।' : 'Deleted FAQ entry.');
                     }}
                     className="p-1.5 bg-white border border-rose-200 text-rose-700 rounded-lg"
                     aria-label="Delete FAQ"
@@ -606,7 +646,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 space-y-4">
             <h2 className="text-base font-bold text-slate-900">
-              Experimental Plate Designer
+              {isBn ? 'পরীক্ষামূলক প্লেট ডিজাইনার' : 'Experimental Plate Designer'}
             </h2>
             <div className="flex justify-center py-2">
               <PseudoisochromaticPlate plate={editingPlate} size={210} />
@@ -731,7 +771,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setEditingPlate({ ...editingPlate, enabled: e.target.checked })
                 }
               />
-              Enabled in Active Screening Pool
+              {isBn ? 'সক্রিয় স্ক্রিনিং প্লেট' : 'Enabled in Active Screening Pool'}
             </label>
             <div className="flex gap-2">
               <button
@@ -739,12 +779,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={async () => {
                   await savePlateAdmin(editingPlate);
                   await onRefreshPublicContent();
-                  notify(`Saved plate "${editingPlate.id}".`);
+                  notify(isBn ? 'প্লেট সংরক্ষিত হয়েছে।' : `Saved plate "${editingPlate.id}".`);
                 }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-xs font-semibold rounded-lg"
               >
                 <Save className="w-3.5 h-3.5" aria-hidden="true" />
-                Save Plate
+                {isBn ? 'প্লেট সংরক্ষণ' : 'Save Plate'}
               </button>
               <button
                 type="button"
@@ -757,14 +797,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 }
                 className="px-3 py-2 border border-slate-300 text-xs font-medium rounded-lg"
               >
-                New ID
+                {isBn ? 'নতুন আইডি' : 'New ID'}
               </button>
             </div>
           </div>
 
           <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 space-y-3">
             <h2 className="text-base font-bold text-slate-900 mb-2">
-              Experimental Plate Sets ({plates.length})
+              {isBn ? `পরীক্ষামূলক প্লেটসমূহ (${plates.length})` : `Experimental Plate Sets (${plates.length})`}
             </h2>
             <div className="max-h-[600px] overflow-y-auto space-y-2.5 pr-1">
               {plates.map((plate) => (
@@ -775,7 +815,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div>
                     <p className="text-xs font-mono text-slate-500">
                       {plate.module} · {plate.stimulusType} · Target: {plate.targetValue} ·{' '}
-                      {plate.enabled ? 'Enabled' : 'Disabled'}
+                      {plate.enabled ? (isBn ? 'সক্রিয়' : 'Enabled') : (isBn ? 'নিষ্ক্রিয়' : 'Disabled')}
                     </p>
                     <p className="text-xs font-semibold text-slate-900 mt-0.5">{plate.category}</p>
                   </div>
@@ -785,14 +825,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       onClick={() => setEditingPlate(plate)}
                       className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-medium rounded-lg"
                     >
-                      Edit
+                      {isBn ? 'সম্পাদনা' : 'Edit'}
                     </button>
                     <button
                       type="button"
                       onClick={async () => {
                         await deletePlateAdmin(plate.id);
                         await onRefreshPublicContent();
-                        notify(`Deleted plate "${plate.id}".`);
+                        notify(isBn ? 'প্লেট মুছে ফেলা হয়েছে।' : `Deleted plate "${plate.id}".`);
                       }}
                       className="p-1.5 bg-white border border-rose-200 text-rose-700 rounded-lg"
                       aria-label={`Delete plate ${plate.id}`}
@@ -811,13 +851,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'settings' && (
         <div className="max-w-3xl bg-white border border-slate-200 rounded-xl p-6 sm:p-8 space-y-6">
           <h2 className="text-lg font-bold text-slate-900">
-            Website Content &amp; Screening Availability
+            {isBn ? 'ওয়েবসাইটের লেখা ও পরীক্ষার প্রাপ্যতা' : 'Website Content & Screening Availability'}
           </h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Hero Heading
+                {isBn ? 'হিরো শিরোনাম' : 'Hero Heading'}
               </label>
               <input
                 type="text"
@@ -829,7 +869,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Hero Subtitle
+                {isBn ? 'হিরো উপশিরোনাম' : 'Hero Subtitle'}
               </label>
               <textarea
                 rows={2}
@@ -841,7 +881,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Medical Disclaimer Notice
+                {isBn ? 'চিকিৎসা সতর্কবার্তা' : 'Medical Disclaimer Notice'}
               </label>
               <textarea
                 rows={3}
@@ -855,7 +895,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="pt-2 border-t border-slate-200">
               <p className="text-xs font-semibold text-slate-700 mb-3">
-                Screening Module Availability
+                {isBn ? 'স্ক্রিনিং মডিউল চালু/বন্ধ' : 'Screening Module Availability'}
               </p>
               <div className="grid sm:grid-cols-2 gap-3">
                 {(
@@ -870,7 +910,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     key={mod}
                     className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800"
                   >
-                    <span>{getTestDisplayName(mod)}</span>
+                    <span>{getTestDisplayName(mod, lang)}</span>
                     <input
                       type="checkbox"
                       checked={draftConfig.enabledTests[mod]}
@@ -895,12 +935,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             onClick={async () => {
               await saveSiteConfigAdmin(draftConfig);
               await onRefreshPublicContent();
-              notify('Updated site content and test availability configuration.');
+              notify(
+                isBn
+                  ? 'সাইট কনফিগারেশন সংরক্ষিত হয়েছে।'
+                  : 'Updated site content and test availability configuration.'
+              );
             }}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800"
           >
             <Save className="w-4 h-4" aria-hidden="true" />
-            Save Configuration
+            {isBn ? 'কনফিগারেশন সংরক্ষণ করুন' : 'Save Configuration'}
           </button>
         </div>
       )}

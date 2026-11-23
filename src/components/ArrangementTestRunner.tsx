@@ -8,6 +8,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { ARRANGEMENT_LEVELS, ArrangementLevel } from '../data/arrangementLevels';
+import { BN_ARRANGEMENT_LEVELS, Language } from '../i18n/translations';
 import {
   computeArrangementScreeningResult,
   evaluateArrangementSequence,
@@ -17,6 +18,7 @@ import {
 import { ArrangementComparison, ScreeningResult } from '../types/vision';
 
 interface ArrangementTestRunnerProps {
+  lang: Language;
   userId: string | null;
   onComplete: (result: ScreeningResult) => void;
   onExit: () => void;
@@ -25,7 +27,6 @@ interface ArrangementTestRunnerProps {
 
 function createShuffledLevelColors(level: ArrangementLevel): string[] {
   let shuffled = shuffleItems(level.referenceSequence);
-  // Ensure initial arrangement is not already identical to reference
   let guard = 0;
   while (shuffled.every((c, idx) => c === level.referenceSequence[idx]) && guard < 10) {
     shuffled = shuffleItems(level.referenceSequence);
@@ -35,11 +36,13 @@ function createShuffledLevelColors(level: ArrangementLevel): string[] {
 }
 
 export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
+  lang,
   userId,
   onComplete,
   onExit,
   onReviewInstructions,
 }) => {
+  const isBn = lang === 'bn';
   const [selectedDifficultyIndex, setSelectedDifficultyIndex] = useState<number>(0);
   const [tiles, setTiles] = useState<string[]>(() =>
     createShuffledLevelColors(ARRANGEMENT_LEVELS[0])
@@ -55,6 +58,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
 
   const sessionStartRef = useRef<number>(Date.now());
   const currentLevel = ARRANGEMENT_LEVELS[selectedDifficultyIndex];
+  const bnLevel = BN_ARRANGEMENT_LEVELS[currentLevel.id];
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -78,14 +82,22 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
     next.splice(toIdx, 0, moved);
     setTiles(next);
     setSelectedTileIdx(toIdx);
-    setAnnouncement(`Moved tile from position ${fromIdx + 1} to position ${toIdx + 1}.`);
+    setAnnouncement(
+      isBn
+        ? `টাইলস অবস্থান ${fromIdx + 1} থেকে ${toIdx + 1}-এ সরানো হয়েছে।`
+        : `Moved tile from position ${fromIdx + 1} to position ${toIdx + 1}.`
+    );
   };
 
   const handleTileClick = (idx: number) => {
     if (levelPreviewComparison) return;
     if (selectedTileIdx === null) {
       setSelectedTileIdx(idx);
-      setAnnouncement(`Selected tile at position ${idx + 1}. Choose another tile or use Left/Right buttons to move.`);
+      setAnnouncement(
+        isBn
+          ? `অবস্থান ${idx + 1} নির্বাচিত হয়েছে। অদলবদল করতে আরেকটি টাইলস বা তীর বাটন ব্যবহার করুন।`
+          : `Selected tile at position ${idx + 1}. Choose another tile or use Left/Right buttons to move.`
+      );
       return;
     }
     if (selectedTileIdx === idx) {
@@ -97,7 +109,11 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
     next[selectedTileIdx] = next[idx];
     next[idx] = temp;
     setTiles(next);
-    setAnnouncement(`Swapped position ${selectedTileIdx + 1} with position ${idx + 1}.`);
+    setAnnouncement(
+      isBn
+        ? `অবস্থান ${selectedTileIdx + 1} এবং ${idx + 1} অদলবদল করা হয়েছে।`
+        : `Swapped position ${selectedTileIdx + 1} with position ${idx + 1}.`
+    );
     setSelectedTileIdx(null);
   };
 
@@ -123,7 +139,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
 
     const comparison: ArrangementComparison = {
       levelId: currentLevel.id,
-      levelTitle: currentLevel.title,
+      levelTitle: isBn && bnLevel ? bnLevel.title : currentLevel.title,
       referenceColors: [...currentLevel.referenceSequence],
       userColors: [...tiles],
       errorScore,
@@ -163,7 +179,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
           className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          Exit Screening
+          {isBn ? 'স্ক্রিনিং থেকে বের হন' : 'Exit Screening'}
         </button>
 
         <div className="flex items-center gap-4 text-xs font-mono tabular-nums text-slate-600">
@@ -173,35 +189,45 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
             className="inline-flex items-center gap-1.5 font-sans text-xs font-medium text-blue-700 hover:underline"
           >
             <Info className="w-3.5 h-3.5" aria-hidden="true" />
-            Review Instructions
+            {isBn ? 'নির্দেশনা দেখুন' : 'Review Instructions'}
           </button>
           <span aria-hidden="true">·</span>
           <span>
-            Stage {selectedDifficultyIndex + 1} / {ARRANGEMENT_LEVELS.length}
+            {isBn ? 'ধাপ' : 'Stage'} {selectedDifficultyIndex + 1} / {ARRANGEMENT_LEVELS.length}
           </span>
           <span aria-hidden="true">·</span>
-          <span>Elapsed: {formatDuration(elapsedSeconds)}</span>
+          <span>
+            {isBn ? 'সময়:' : 'Elapsed:'} {formatDuration(elapsedSeconds, lang)}
+          </span>
         </div>
       </div>
 
       {/* Scientific Context Banner */}
       <div className="mb-6 px-4 py-3 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-700">
         <strong className="font-semibold text-slate-900">
-          Interactive Hue Sequence Arrangement Exercise
+          {isBn
+            ? 'ইন্টারঅ্যাক্টিভ রঙের ক্রম সাজানোর অনুশীলন'
+            : 'Interactive Hue Sequence Arrangement Exercise'}
         </strong>
         {' · '}
-        Educational gradient ordering task across 3 difficulty tiers. This is NOT a certified
-        Farnsworth-Munsell 100 Hue Test or standardized Munsell cap instrument.
+        {isBn
+          ? '৩টি কঠিনতার স্তরে শিক্ষামূলক রঙ সাজানোর পরীক্ষা। এটি অনুমোদিত Farnsworth-Munsell 100 Hue টেস্ট নয়।'
+          : 'Educational gradient ordering task across 3 difficulty tiers. This is NOT a certified Farnsworth-Munsell 100 Hue Test or standardized Munsell cap instrument.'}
       </div>
 
       <div className="bg-white hc-surface border border-slate-200 rounded-xl p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
             <p className="text-xs font-mono uppercase tracking-wider text-blue-700 mb-1">
-              Difficulty: {currentLevel.difficulty}
+              {isBn ? 'কঠিনতার স্তর:' : 'Difficulty:'}{' '}
+              {isBn && bnLevel ? bnLevel.difficulty : currentLevel.difficulty}
             </p>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">{currentLevel.title}</h2>
-            <p className="text-sm text-slate-600">{currentLevel.description}</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              {isBn && bnLevel ? bnLevel.title : currentLevel.title}
+            </h2>
+            <p className="text-sm text-slate-600">
+              {isBn && bnLevel ? bnLevel.description : currentLevel.description}
+            </p>
           </div>
           {!levelPreviewComparison && (
             <button
@@ -213,23 +239,16 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
               className="inline-flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-              Reshuffle Tiles
+              {isBn ? 'পুনরায় এলোমেলো করুন' : 'Reshuffle Tiles'}
             </button>
           )}
         </div>
 
-        {/* Accessibility instructions */}
         <p className="text-xs text-slate-600 mb-5 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
-          <strong>How to arrange:</strong> Drag and drop tiles between the fixed Start and End
-          anchors, click two tiles to swap them, or select a tile and use the{' '}
-          <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px]">
-            ←
-          </kbd>{' '}
-          /{' '}
-          <kbd className="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px]">
-            →
-          </kbd>{' '}
-          arrow keys or move buttons below.
+          <strong>{isBn ? 'কীভাবে সাজাবেন:' : 'How to arrange:'}</strong>{' '}
+          {isBn
+            ? 'দুটি স্থির প্রান্তের মাঝে টাইলসগুলো ড্র্যাগ করে বসান, অথবা দুটি টাইলসে ক্লিক করে স্থান বদল করুন, কিংবা টাইলস নির্বাচন করে কিবোর্ডের ← / → বাটন ব্যবহার করুন।'
+            : 'Drag and drop tiles between the fixed Start and End anchors, click two tiles to swap them, or select a tile and use the ← / → arrow keys or move buttons below.'}
         </p>
 
         {/* Tile Row */}
@@ -239,13 +258,15 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
             <div
               className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg border-2 border-slate-900 flex items-end justify-center p-1"
               style={{ backgroundColor: currentLevel.startAnchor.color }}
-              title={currentLevel.startAnchor.label}
+              title={isBn && bnLevel ? bnLevel.startLabel : currentLevel.startAnchor.label}
             >
               <span className="text-[10px] font-mono font-semibold bg-white/90 text-slate-900 px-1 rounded">
-                Start
+                {isBn ? 'শুরু' : 'Start'}
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-500 mt-1.5">Fixed</span>
+            <span className="text-[11px] font-mono text-slate-500 mt-1.5">
+              {isBn ? 'স্থির' : 'Fixed'}
+            </span>
           </div>
 
           {/* Movable Tiles */}
@@ -266,9 +287,17 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
                   }}
                   onClick={() => handleTileClick(idx)}
                   onKeyDown={(e) => handleTileKeyDown(e, idx)}
-                  aria-label={`Movable color tile at position ${idx + 1}. ${
-                    isSelected ? 'Selected.' : 'Press Enter to select or use Left/Right arrows to move.'
-                  }`}
+                  aria-label={
+                    isBn
+                      ? `অবস্থান ${idx + 1}-এ চলমান রঙের টাইলস। ${
+                          isSelected ? 'নির্বাচিত।' : 'নির্বাচন করতে Enter বা সরাতে তীর কী চাপুন।'
+                        }`
+                      : `Movable color tile at position ${idx + 1}. ${
+                          isSelected
+                            ? 'Selected.'
+                            : 'Press Enter to select or use Left/Right arrows to move.'
+                        }`
+                  }
                   className={`w-12 h-16 sm:w-14 sm:h-20 rounded-lg flex items-start justify-end p-1 transition-transform cursor-grab active:cursor-grabbing ${
                     isSelected
                       ? 'ring-2 ring-blue-700 ring-offset-2 scale-105'
@@ -293,13 +322,15 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
             <div
               className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg border-2 border-slate-900 flex items-end justify-center p-1"
               style={{ backgroundColor: currentLevel.endAnchor.color }}
-              title={currentLevel.endAnchor.label}
+              title={isBn && bnLevel ? bnLevel.endLabel : currentLevel.endAnchor.label}
             >
               <span className="text-[10px] font-mono font-semibold bg-white/90 text-slate-900 px-1 rounded">
-                End
+                {isBn ? 'শেষ' : 'End'}
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-500 mt-1.5">Fixed</span>
+            <span className="text-[11px] font-mono text-slate-500 mt-1.5">
+              {isBn ? 'স্থির' : 'Fixed'}
+            </span>
           </div>
         </div>
 
@@ -307,7 +338,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
         {!levelPreviewComparison && selectedTileIdx !== null && (
           <div className="flex items-center justify-center gap-3 mb-6">
             <span className="text-xs font-mono text-slate-600">
-              Selected Position #{selectedTileIdx + 1}:
+              {isBn ? `নির্বাচিত অবস্থান #${selectedTileIdx + 1}:` : `Selected Position #${selectedTileIdx + 1}:`}
             </span>
             <button
               type="button"
@@ -316,7 +347,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-40"
             >
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
-              Move Left
+              {isBn ? 'বামে সরান' : 'Move Left'}
             </button>
             <button
               type="button"
@@ -324,33 +355,34 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
               onClick={() => swapTiles(selectedTileIdx, selectedTileIdx + 1)}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-40"
             >
-              Move Right
+              {isBn ? 'ডানে সরান' : 'Move Right'}
               <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         )}
 
-        {/* Screen-reader live region */}
         <div className="sr-only" aria-live="polite">
           {announcement}
         </div>
 
-        {/* Post-stage comparison view */}
         {levelPreviewComparison ? (
           <div className="border-t border-slate-200 pt-6 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-blue-700" aria-hidden="true" />
-                  Stage Evaluated: {levelPreviewComparison.exactMatches} /{' '}
-                  {levelPreviewComparison.referenceColors.length} Exact Matches
+                  {isBn
+                    ? `ধাপ মূল্যায়িত: ${levelPreviewComparison.exactMatches} / ${levelPreviewComparison.referenceColors.length}টি সঠিক অবস্থান`
+                    : `Stage Evaluated: ${levelPreviewComparison.exactMatches} / ${levelPreviewComparison.referenceColors.length} Exact Matches`}
                 </h3>
                 <p className="text-xs text-slate-600 mt-1">
-                  Displacement error score:{' '}
+                  {isBn ? 'বিচ্যুতি ত্রুটি স্কোর:' : 'Displacement error score:'}{' '}
                   <span className="font-mono font-semibold text-slate-900">
                     {levelPreviewComparison.errorScore}
                   </span>{' '}
-                  (0 indicates exact alignment with the reference sequence).
+                  {isBn
+                    ? '(০ মানে রেফারেন্স ক্রমের সাথে হুবহু মিল)।'
+                    : '(0 indicates exact alignment with the reference sequence).'}
                 </p>
               </div>
               <button
@@ -359,7 +391,11 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 transition-colors"
               >
                 {selectedDifficultyIndex + 1 < ARRANGEMENT_LEVELS.length
-                  ? 'Continue to Next Level'
+                  ? isBn
+                    ? 'পরবর্তী স্তরে যান'
+                    : 'Continue to Next Level'
+                  : isBn
+                  ? 'পূর্ণাঙ্গ ফলাফল দেখুন'
                   : 'View Complete Screening Results'}
                 <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </button>
@@ -367,7 +403,9 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
-                <p className="text-xs font-mono uppercase text-slate-500 mb-2">Your Sequence</p>
+                <p className="text-xs font-mono uppercase text-slate-500 mb-2">
+                  {isBn ? 'আপনার সাজানো ক্রম' : 'Your Sequence'}
+                </p>
                 <div className="flex gap-1.5">
                   {levelPreviewComparison.userColors.map((hex, i) => (
                     <div
@@ -380,7 +418,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
               </div>
               <div className="p-4 rounded-lg bg-slate-50 border border-slate-200">
                 <p className="text-xs font-mono uppercase text-slate-500 mb-2">
-                  Reference Hue Sequence
+                  {isBn ? 'সঠিক রেফারেন্স ক্রম' : 'Reference Hue Sequence'}
                 </p>
                 <div className="flex gap-1.5">
                   {levelPreviewComparison.referenceColors.map((hex, i) => (
@@ -402,7 +440,7 @@ export const ArrangementTestRunner: React.FC<ArrangementTestRunnerProps> = ({
               onClick={handleSubmitLevel}
               className="px-6 py-3 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50"
             >
-              Submit Hue Arrangement
+              {isBn ? 'রঙের ক্রম জমা দিন' : 'Submit Hue Arrangement'}
             </button>
           </div>
         )}
